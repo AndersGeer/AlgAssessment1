@@ -17,9 +17,14 @@ public class ComponentImage
 	private boolean pictureGreyscaled = false;
 	private boolean componentsConnected = false;
 
+	/* ************************************************************************************** *\
+	 * 																						  *\
+	 * Returns the count of components in the image given (Count of objects + background)	* *\
+	 * 																						  *\
+	 * ************************************************************************************** */
 	public int countComponent() throws Exception 
 	{
-
+		//Checks if picture has been binarised
 		if (!pictureBinarised) 
 		{
 			throw new Exception("Picture is has not been binarised! Please call the binaryComponentImage() first!");			
@@ -27,19 +32,21 @@ public class ComponentImage
 
 		int currentPixel = 0;
 
+		//Goes from bottom right to top left, column by column
 		for (int x = width - 1; x >= 0; x--) 
 		{
 			for (int y = height - 1; y >= 0; y--) 
 			{
 				int thisSite = currentPixel;
 				Color thisColor = pic.get(x, y);
-
+				//Checks if the pixel to the left has the same color as the current pixel
 				if (y != 0 && pic.get(x, y - 1).equals(thisColor)) 
 				{
 					int siteToUnion = currentPixel + 1;
 					uf.union(thisSite, siteToUnion);
 
 				}
+				//Checks if the pixel below has the same color as the current pixel
 				if (x != 0 && pic.get(x - 1, y).equals(thisColor)) 
 				{
 					int siteToUnion = currentPixel + (height);
@@ -53,8 +60,16 @@ public class ComponentImage
 		return uf.count();
 	}
 
+
+
+	/* ************************************************************************************** *\
+	 * 																						  *\
+	 * Returns a binarised picture of the greyscaled picture								* *\
+	 * 																						  *\
+	 * ************************************************************************************** */
 	public Picture binaryComponentImage(int threshold) throws Exception 
 	{
+		//Checks if picture has been converted to a greyscale image and if threshold values are within the allowed range
 		if (!pictureGreyscaled) 
 		{
 			throw new Exception("Picture is has not been greyscaled! Please call the binaryComponentImage() first!");			
@@ -68,8 +83,12 @@ public class ComponentImage
 		{
 			throw new Exception("Threshold cannot be less than 0");
 		}
+
+		//Makes a copy of the image to work on
 		Picture binaryPicture = new Picture(pic);
 		int thresholdValue = threshold;
+
+		//Works from Top left to bottom right
 		for (int x = 0; x < width; x++) 
 		{
 			for (int y = 0; y < height; y++) 
@@ -84,12 +103,17 @@ public class ComponentImage
 
 			}
 		}
-		//binaryPicture.show();
+		binaryPicture.show();
 		pic = binaryPicture;
 		pictureBinarised = true;
 		return binaryPicture;
 	}
 
+	/* ************************************************************************************** *\
+	 * 																						  *\
+	 * Initialises the image. Gets height and width											* *\
+	 * 																						  *\
+	 * ************************************************************************************** */
 	public void componentImage(String fileLocation)
 	{
 		pic = new Picture(fileLocation);
@@ -98,14 +122,27 @@ public class ComponentImage
 		uf = new WeightedQuickUnionUF(pic.width() * pic.height());
 		pictureGreyscaled = false;
 		pictureBinarised = false;
+		componentsConnected = false;
 		//pic.show();
 	}
 
+
+	/* ************************************************************************************** *\
+	 * 																						  *\
+	 * Test method. Used to see if componentImage() method works							* *\
+	 * 																						  *\
+	 * ************************************************************************************** */
 	public Picture returnImage()
 	{
 		return pic;
 	}
 
+
+	/* ************************************************************************************** *\
+	 * 																						  *\
+	 * Changes the original picture to a greyscale											* *\
+	 * 																						  *\
+	 * ************************************************************************************** */
 	public void greyScaleImage() 
 	{
 		for (int x = 0; x < width; x++) 
@@ -117,20 +154,27 @@ public class ComponentImage
 				pic.set(x, y, grey);
 			}
 		}
-		//pic.show();
+		pic.show();
 		pictureGreyscaled = true;
 	}
 
+
+	/* ************************************************************************************** *\
+	 * 																						  *\
+	 * Returns an image with components colored												* *\
+	 * 																						  *\
+	 * ************************************************************************************** */
 	public Picture colourComponentImage() throws Exception 
 	{
 		if (!componentsConnected ) 
 		{
 			throw new Exception("Picture is has not been connected! Please call the countComponent() first!");
 		}
-		
+
 		Picture colorComponentPicture = new Picture(pic);
 		Color[] colors = new Color[uf.count()];
 		int usedColors = 0;
+		//Randomizes x colors where x is the number of components in the picture
 		for (int i = 0; i < colors.length; i++) {
 
 			Random rand = new Random();
@@ -140,27 +184,38 @@ public class ComponentImage
 			int  b = rand.nextInt(255);
 			colors[i] = new Color(r,g,b);
 		}
+
+
 		int[] components = new int[uf.count()];
 		int slotsUsedInComponents = 0;
 		int currentPixel = 0;
+
+
 		for (int x = width-1; x >=0; x--) 
 		{
 			for (int y = height-1; y>=0; y--) 
 			{
-
 				Color startcolor = pic.get(x, y);
 				boolean hasConnection = false;
 
+				/*
+				 * For loop is a little bit special, on first pixel it won't be run as slotsUsedInComponents is zerom thus 
+				 * hasConnection boolean is false and the if statement is run.
+				 * 
+				 * When it is run it checks for each first pixel in a component we've met if the current pixel 
+				 * is connected with it and if they are, make it the same color
+				 */
 				for (int i = 0; i < slotsUsedInComponents; i++) 
 				{
 					if (uf.connected(currentPixel, components[i])) 
 					{
-						System.out.println(getX(components[i]) + "   " +  getY(components[i]));
 						Color col = colorComponentPicture.get(getX(components[i]), getY(components[i]));
 						colorComponentPicture.set(x, y, col);
 						hasConnection = true;
 					}
 				}
+
+				//Changes color depending on the value of usedColors integer. Adds the new components pixel to the components array
 				if (!hasConnection) {
 					components[slotsUsedInComponents++] = currentPixel;
 					if (x != width-1 && y != height-1) 
@@ -169,39 +224,50 @@ public class ComponentImage
 					}
 					else 
 					{
+						/*
+						 * Set the FIRST pixel encountered to the original color.
+						 * 
+						 * It is assumed the first pixel is the background this however might not always be the case.
+						 */
 						colorComponentPicture.set(x, y, startcolor);
 					}
 				}
 
 
 				currentPixel++;
-			
+
 			}
 		}
-		
+
 		colorComponentPicture.show();
 		pic = colorComponentPicture;
-		
+
 		return colorComponentPicture;
 	}
 
 
-
+	/* ************************************************************************************** *\
+	 * 																						  *\
+	 * Returns a picture with components highlighted with red squares						* *\
+	 * 																						  *\
+	 * ************************************************************************************** */
 	public Picture highlightComponentImage() throws Exception 
 	{
 		if (!componentsConnected) 
 		{
 			throw new Exception("Picture is has not been connected! Please call the countComponent() first!");
 		}
-		
+
+		//Initialising four arrays to hold the highest/lowest values
 		Picture higlightComponentPicture = new Picture(pic);
 		int[] highX = new int[uf.count()];
 		int[] highY = new int[uf.count()];
 		int[] lowY = new int[uf.count()];
 		int[] lowX = new int[uf.count()];
-
 		int slotsUsedInComponents = 0;
+
 		int currentPixel = 0;
+
 		for (int x = width-1; x >=0; x--) 
 		{
 			for (int y = height-1; y>=0; y--) 
@@ -211,42 +277,40 @@ public class ComponentImage
 				for (int i = 0; i < slotsUsedInComponents; i++) 
 				{
 					if (uf.connected(currentPixel, highX[i])) 
-					{			
+					{	
+						//Finding the highest and lowest values for each component
 						hasConnection = true;
-						if (x == getX(highX[i])+1) 
+						if (x >getX(highX[i])+1) 
 						{
-							if (getY(lowY[i]) < y && y < getY(highY[i])) 
-							{
-								highX[i] = currentPixel;
-							}
+
+							highX[i] = currentPixel;
+
 
 						}
-						else if (x==getX(lowX[i])-1) 
+						else if (x<getX(lowX[i])) 
 						{
-							if (getY(lowY[i]) < y && y < getY(highY[i])) 
-							{
-								lowX[i] = currentPixel;
-							}
+
+							lowX[i] = currentPixel;
+
 						}
 
-						if (y==getY(highY[i])+1) 
+						if (y>getY(highY[i])) 
 						{
-							if (getX(lowX[i]) < x && x < getX(highX[i])) 
-							{
-								highY[i] = currentPixel;
-							}
+
+							highY[i] = currentPixel;
+
 						}
-						else if (y ==  getY(lowY[i] - 1)) 
+						else if (y <  getY(lowY[i])) 
 						{
-							if (getX(lowX[i]) < x && x < getX(highX[i])) 
-							{
-								lowY[i] = currentPixel;
-							}
+
+							lowY[i] = currentPixel;
+
 						}
 					}
 				}
 				if (!hasConnection) 
 				{
+					//Adds the new component to all of the arrays.
 					highX[slotsUsedInComponents] = currentPixel;
 					lowX[slotsUsedInComponents] = currentPixel;
 					highY[slotsUsedInComponents] = currentPixel;
@@ -256,6 +320,8 @@ public class ComponentImage
 			}
 		}	
 
+
+		//Coloring the adjacent
 		currentPixel = 0;
 		for (int x = width-1; x >=0; x--) 
 		{
@@ -263,21 +329,33 @@ public class ComponentImage
 			{
 				for (int i = 0; i < lowX.length; i++) 
 				{
-					if (x == getX(lowX[i])) 
+					if (x == getX(lowX[i]+1)) 
 					{
-						higlightComponentPicture.set(x, y, Color.red);
+						if (getY(lowY[i]) <= y && y <= getY(highY[i])) 
+						{
+							higlightComponentPicture.set(x, y, Color.red);
+						}
 					}
-					if (x == getX(highX[i])) 
+					if (x == getX(highX[i]-1)) 
 					{
-						higlightComponentPicture.set(x, y, Color.red);
+						if (getY(lowY[i]) <= y && y <= getY(highY[i])) 
+						{
+							higlightComponentPicture.set(x, y, Color.red);
+						}
 					}
-					if (y == getY(lowY[i])) 
+					if (y == getY(lowY[i]+1)) 
 					{
-						higlightComponentPicture.set(x, y, Color.red);
+						if (getX(lowX[i]) <= x && x <= getX(highX[i])) 
+						{
+							higlightComponentPicture.set(x, y, Color.red);
+						}
 					}
-					if (y == getY(highY[i])) 
+					if (y == getY(highY[i]-1)) 
 					{
-						higlightComponentPicture.set(x, y, Color.red);
+						if (getX(lowX[i]) <= x && x <= getX(highX[i])) 
+						{
+							higlightComponentPicture.set(x, y, Color.red);
+						}
 					}
 
 				}
@@ -285,7 +363,7 @@ public class ComponentImage
 				currentPixel++;
 			}
 		}
-		//higlightComponentPicture.show();
+		higlightComponentPicture.show();
 		return higlightComponentPicture;
 	}
 
@@ -302,5 +380,18 @@ public class ComponentImage
 		return (width-1) - (i-(i%height))/height;
 	}
 	
-
+	public static void main(String[] args) {
+		ComponentImage img = new ComponentImage();
+		img.componentImage("Pictures/bacteria.bmp");
+		img.greyScaleImage();
+		try {
+			img.binaryComponentImage(128);
+			img.countComponent();
+			img.highlightComponentImage();
+			img.colourComponentImage();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 }
